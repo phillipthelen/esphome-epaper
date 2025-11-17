@@ -61,6 +61,8 @@ void GDEQ0426T82::init_display_() {
 }
 
 void GDEQ0426T82::write_buffer_(RefreshMode mode) {
+  const uint16_t x = 0;
+  const uint16_t y = 0;
   this->command(0x21); // Display Update Controll
   this->data(0x40);    // bypass RED as 0
   this->data(0x00); 
@@ -104,8 +106,6 @@ void GDEQ0426T82::write_buffer_(RefreshMode mode) {
       this->data(0xfc);
       this->command(0x20);
 
-      const uint16_t x = 0;
-        const uint16_t y = 0;
       this->command(0x11); // set ram entry mode
       this->data(0x01);    // x increase, y decrease : y reversed
       this->command(0x44);
