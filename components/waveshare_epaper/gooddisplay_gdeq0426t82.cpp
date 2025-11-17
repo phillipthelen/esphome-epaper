@@ -41,49 +41,29 @@ void GDEQ0426T82::display() {
 
 void GDEQ0426T82::init_display_() {
   reset_();
-
-  this->wait_until_idle_();
-
-  this->command(0x01);  // POWER SETTING
-  this->data(0x07);
-  this->data(0x07);  // VGH=20V,VGL=-20V
-  this->data(0x3f);  // VDH=15V
-  this->data(0x3f);  // VDL=-15V
-  this->data(0x09); // VDHR=4.2V
-
-  // Enhanced display drive(Add 0x06 command)
-  this->command(0x06);  // Booster Soft Start
-  this->data(0x17);
-  this->data(0x17);
-  this->data(0x28);
-  this->data(0x17);
-
-  this->command(0x04);  // POWER ON
-  delay(100);
-  this->wait_until_idle_();  // waiting for the electronic paper IC to
-                             // release the idle signal
-
-  this->command(0x00);  // PANNEL SETTING
-  this->data(0x1F);     // KW-3f   KWR-2F BWROTP 0f BWOTP 1f
-
-  this->command(0x61);  // tres
-  this->data(0x03);     // source 800
-  this->data(0x20);
-  this->data(0x01);  // gate 480
-  this->data(0xE0);
-
-  this->command(0x15);
-  this->data(0x00);
-
-  this->command(0x50);  // VCOM AND DATA INTERVAL SETTING
-  this->data(0x10);
-  this->data(0x07);
-
-  this->command(0x60);  // TCON SETTING
-  this->data(0x22);
+  delay(10);
+  this->command(0x12);  //SWRESET
+  delay(10); // 10ms according to specs
+  this->command(0x18);
+  this->data(0x80);
+  this->command(0x0C);
+  this->data(0xAE);
+  this->data(0xC7);
+  this->data(0xC3);
+  this->data(0xC0);
+  this->data(0x80);
+  this->command(0x01); // Driver output control
+  this->data((HEIGHT - 1) % 256); // gates A0..A7
+  this->data((HEIGHT - 1) / 256); // gates A8, A9
+  this->data(0x02); // SM (interlaced) ??
+  this->command(0x3C); // BorderWavefrom
+  this->data(0x01);
 }
 
 void GDEQ0426T82::write_buffer_(RefreshMode mode) {
+  this->command(0x21); // Display Update Controll
+  this->data(0x40);    // bypass RED as 0
+  this->data(0x00); 
   switch (mode) {
     case FULL_REFRESH:
       this->clear_();
@@ -94,39 +74,20 @@ void GDEQ0426T82::write_buffer_(RefreshMode mode) {
       return;
 
     case FAST_REFRESH:
-      this->command(0x00);  // PANNEL SETTING
-      this->data(0x1F);     // KW-3f   KWR-2F BWROTP 0f BWOTP 1f
-
-      this->command(0x50);  // VCOM AND DATA INTERVAL SETTING
-      this->data(0x10);
-      this->data(0x07);
-
-      this->command(0x04);  // POWER ON
-      delay(100);
-      this->wait_until_idle_();  // waiting for the electronic paper IC to
-                                 // release the idle signal
-
-      // Enhanced display drive(Add 0x06 command)
-      this->command(0x06);  // Booster Soft Start
-      this->data(0x27);
-      this->data(0x27);
-      this->data(0x18);
-      this->data(0x17);
-
-      this->command(0xE0);
-      this->data(0x02);
-      this->command(0xE5);
-      this->data(0x5A);
+    this->command(0x1A); // Write to temperature register
+    this->data(0x5A);
+    this->command(0x22);
+    this->data(0xd7);
 
       // Write old Data
-      this->command(0x10);
+      this->command(0x26);
       this->start_data_();
       for (uint32_t i = 0; i < this->get_buffer_length_(); i++)
         this->write_byte(0x00);
       this->end_data_();
 
       // Write new Data
-      this->command(0x13);  // writes New data to SRAM.
+      this->command(0x24);  // writes New data to SRAM.
       this->start_data_();
       for (uint32_t i = 0; i < this->get_buffer_length_(); i++) {
         this->write_byte(~this->buffer_[i]);
@@ -136,40 +97,38 @@ void GDEQ0426T82::write_buffer_(RefreshMode mode) {
       break;
 
     case PARTIAL_REFRESH:
-      this->command(0x00);  // PANNEL SETTING
-      this->data(0x1F);     // KW-3f   KWR-2F BWROTP 0f BWOTP 1f
+      this->command(0x21); // Display Update Controll
+      this->data(0x00);    // RED normal
+      this->data(0x00);    // single chip application
+      this->command(0x22);
+      this->data(0xfc);
+      this->command(0x20);
 
-      this->command(0x04);  // POWER ON
-      delay(100);
-      this->wait_until_idle_();  // waiting for the electronic paper IC to
-                                 // release the idle signal
-      this->command(0xE0);
-      this->data(0x02);
-      this->command(0xE5);
-      this->data(0x6E);
+      this->command(0x11); // set ram entry mode
+      this->data(0x01);    // x increase, y decrease : y reversed
+      this->command(0x44);
+      this->data(x % 256);
+      this->data(x / 256);
+      this->data((x + w - 1) % 256);
+      this->data((x + w - 1) / 256);
+      this->command(0x45);
+      this->data((y + h - 1) % 256);
+      this->data((y + h - 1) / 256);
+      this->data(y % 256);
+      this->data(y / 256);
+      this->command(0x4e);
+      this->data(x % 256);
+      this->data(x / 256);
+      this->command(0x4f);
+      this->data((y + h - 1) % 256);
+      this->data((y + h - 1) / 256);
 
-      this->command(0x50);
-      this->data(0xA9);
-      this->data(0x07);
-
-      this->command(0x91);  // This command makes the display enter partial mode
-      this->command(0x90);  // resolution setting
-      this->data(0x00);
-      this->data(0x00);  // x-start
-      this->data(WIDTH / 256);
-      this->data(WIDTH % 256 - 1);  // x-end
-      this->data(0x00);             //
-      this->data(0x00);             // y-start
-      this->data(HEIGHT / 256);
-      this->data(HEIGHT % 256 - 1);  // y-end
-      this->data(0x01);
-
-      this->command(0x10);
+      this->command(0x26);
       this->start_data_();
       this->write_array(this->oldData_, this->get_buffer_length_());
       this->end_data_();
 
-      this->command(0x13);  // writes New data to SRAM.
+      this->command(0x24);  // writes New data to SRAM.
       this->start_data_();
       this->write_array(this->buffer_, this->get_buffer_length_());
       this->end_data_();
@@ -233,13 +192,15 @@ void GDEQ0426T82::deep_sleep() {
   this->data(0xf7);     // WBmode:VBDF 17|D7 VBDW 97 VBDB 57    WBRmode:VBDF F7
                         // VBDW 77 VBDB 37  VBDR B7
 
-  this->command(0x02);            // power off
+this->command(0x22);
+    this->data(0x83);
+    this->command(0x20);
   if (!this->wait_until_idle_())  // waiting for the electronic paper IC to
                                   // release the idle signal
     return;
 
-  this->command(0x07);  // deep sleep
-  this->data(0xA5);
+  this->command(0x10);  // deep sleep
+  this->data(0x1);
 }
 
 void GDEQ0426T82::dump_config() {
