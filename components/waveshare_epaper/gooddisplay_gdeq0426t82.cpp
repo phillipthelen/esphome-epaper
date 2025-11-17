@@ -104,24 +104,26 @@ void GDEQ0426T82::write_buffer_(RefreshMode mode) {
       this->data(0xfc);
       this->command(0x20);
 
+      const uint16_t x = 0;
+        const uint16_t y = 0;
       this->command(0x11); // set ram entry mode
       this->data(0x01);    // x increase, y decrease : y reversed
       this->command(0x44);
       this->data(x % 256);
       this->data(x / 256);
-      this->data((x + w - 1) % 256);
-      this->data((x + w - 1) / 256);
+      this->data((x + WIDTH - 1) % 256);
+      this->data((x + WIDTH - 1) / 256);
       this->command(0x45);
-      this->data((y + h - 1) % 256);
-      this->data((y + h - 1) / 256);
+      this->data((y + HEIGHT - 1) % 256);
+      this->data((y + HEIGHT - 1) / 256);
       this->data(y % 256);
       this->data(y / 256);
       this->command(0x4e);
       this->data(x % 256);
       this->data(x / 256);
       this->command(0x4f);
-      this->data((y + h - 1) % 256);
-      this->data((y + h - 1) / 256);
+      this->data((y + HEIGHT - 1) % 256);
+      this->data((y + HEIGHT - 1) / 256);
 
       this->command(0x26);
       this->start_data_();
